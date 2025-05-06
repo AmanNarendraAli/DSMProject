@@ -2,6 +2,7 @@ import os
 import logging
 import pickle
 import spacy
+from pathlib import Path
 from collections import Counter
 from neo4j import GraphDatabase, basic_auth
 from neo4j.exceptions import ServiceUnavailable, Neo4jError
@@ -9,11 +10,17 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 import spacy
 
 # --- Configuration ---
+# Determine the absolute path to the project's root directory
+# __file__ is the path to the current script (e.g., .../Project/components/c4_word_signature.py)
+# .resolve().parent gives the directory of the script (e.g., .../Project/components/)
+# .parent then goes up one level to the project root (e.g., .../Project/)
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
 NEO4J_URI = "bolt://localhost:7687"
 NEO4J_USER = "neo4j"
 NEO4J_PASSWORD = "muttabbocks" # Replace with your password if different
-IDF_VECTORIZER_PATH = "../offline_assets/idf_vector.pkl"
-SPACY_MODEL = "en_core_web_sm" # Ensure this model is downloaded: python -m spacy download en_core_web_sm
+IDF_VECTORIZER_PATH = PROJECT_ROOT / "offline_assets" / "idf_vector.pkl"
+SPACY_MODEL = "en_core_web_sm" 
 MAX_REVIEWS_FOR_SIGNATURE = 5000 # Limit number of reviews processed per user
 TOP_N_TERMS = 20 # Number of top terms/bigrams to return
 ALLOWED_POS = {"PROPN", "ADJ"} # Part-of-speech tags to keep

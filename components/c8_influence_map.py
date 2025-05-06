@@ -1,19 +1,24 @@
 import os
 import logging
 import pickle
+from pathlib import Path
 import numpy as np
 from scipy import stats # For percentile calculation (percentileofscore)
 from neo4j import GraphDatabase, basic_auth
 from neo4j.exceptions import ServiceUnavailable, Neo4jError
 from typing import Optional
+
 # --- Configuration ---
+# Determine the absolute path to the project's root directory
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
 NEO4J_URI = "bolt://localhost:7687"
 NEO4J_USER = "neo4j"
 NEO4J_PASSWORD = "muttabbocks" # Replace with your password if different
 PAGERANK_PROPERTY = "pagerankScore"
-PAGERANK_DISTRIBUTION_FILE = "../offline_assets/pagerank_distribution.pkl"
-USEFUL_VOTE_DISTRIBUTION_FILE = "../offline_assets/useful_vote_distribution.pkl"
-COMPOSITE_METRIC_DISTRIBUTION_FILE = "../offline_assets/composite_metric_distribution.pkl"
+PAGERANK_DISTRIBUTION_FILE = PROJECT_ROOT / "offline_assets" / "pagerank_distribution.pkl"
+USEFUL_VOTE_DISTRIBUTION_FILE = PROJECT_ROOT / "offline_assets" / "useful_vote_distribution.pkl"
+COMPOSITE_METRIC_DISTRIBUTION_FILE = PROJECT_ROOT / "offline_assets" / "composite_metric_distribution.pkl"
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 

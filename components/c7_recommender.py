@@ -1,15 +1,20 @@
 import os
 import logging
 import json
+from pathlib import Path
 from collections import Counter
 from neo4j import GraphDatabase, basic_auth
 from neo4j.exceptions import ServiceUnavailable, Neo4jError
 from typing import Optional
+
 # --- Configuration ---
+# Determine the absolute path to the project's root directory
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
 NEO4J_URI = "bolt://localhost:7687"
 NEO4J_USER = "neo4j"
 NEO4J_PASSWORD = "muttabbocks" # Replace with your password if different
-CATEGORY_POPULARITY_FILE = "../offline_assets/category_top_businesses.jsonl"
+CATEGORY_POPULARITY_FILE = PROJECT_ROOT / "offline_assets" / "category_top_businesses.jsonl"
 RECOMMENDATION_K = 5 # Number of recommendations to return
 TOP_USER_CATEGORIES_N = 5 # Number of user's top categories to consider
 
