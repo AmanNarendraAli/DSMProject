@@ -1,2 +1,8 @@
 *.json
 *.pdf
+*.csv
+*.pkl
+*.jsonl
+*.txt
+*.TTF
+.gitignore

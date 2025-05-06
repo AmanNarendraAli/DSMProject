@@ -1,0 +1,212 @@
+import os
+import logging
+import json
+from collections import Counter
+from neo4j import GraphDatabase, basic_auth
+from neo4j.exceptions import ServiceUnavailable, Neo4jError
+from typing import Optional
+# --- Configuration ---
+NEO4J_URI = "bolt://localhost:7687"
+NEO4J_USER = "neo4j"
+NEO4J_PASSWORD = "muttabbocks" # Replace with your password if different
+CATEGORY_POPULARITY_FILE = "../offline_assets/category_top_businesses.jsonl"
+RECOMMENDATION_K = 5 # Number of recommendations to return
+TOP_USER_CATEGORIES_N = 5 # Number of user's top categories to consider
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+# --- Load Precomputed Data ---
+try:
+    category_popularity = {}
+    logging.info(f"Loading category popularity data from {CATEGORY_POPULARITY_FILE}...")
+    with open(CATEGORY_POPULARITY_FILE, 'r', encoding='utf-8') as f:
+        for line in f:
+            data = json.loads(line)
+            category_popularity[data["category"]] = data["top_businesses"]
+    logging.info(f"Loaded popularity data for {len(category_popularity)} categories.")
+except FileNotFoundError:
+    logging.error(f"Category popularity file not found: {CATEGORY_POPULARITY_FILE}. Run generate_category_popularity.py first.")
+    category_popularity = None # Indicate failure
+except json.JSONDecodeError as e:
+    logging.error(f"Error decoding JSON in {CATEGORY_POPULARITY_FILE}: {e}")
+    category_popularity = None
+except Exception as e:
+    logging.error(f"Error loading popularity data: {e}")
+    category_popularity = None
+
+GENERIC_CATEGORIES = {"Restaurants", "Food", "Nightlife", "Bars","Diner","Cafe","Bakery","Event Planning & Services","Grocery"}
+
+# --- Neo4j Queries ---
+GET_USER_REVIEWED_BUSINESSES_QUERY = """
+MATCH (u:User {user_id: $userId})-[:WROTE]->(:Review)-[:REVIEWS]->(b:Business)
+RETURN DISTINCT b.business_id AS businessId
+"""
+
+GET_BUSINESS_CATEGORIES_QUERY = """
+MATCH (b:Business {business_id: $businessId})-[:IN_CATEGORY]->(c:Category)
+RETURN c.category_id AS categoryId
+"""
+
+GET_BUSINESS_DETAILS_QUERY = """
+MATCH (b:Business {business_id: $businessId})
+OPTIONAL MATCH (b)-[:IN_CATEGORY]->(c:Category)
+RETURN b.name AS name, b.business_id AS businessId, collect(DISTINCT c.category_id) AS categories
+"""
+
+# --- Helper Functions ---
+
+def get_user_reviewed_businesses(driver, user_id):
+    """Fetches the set of business IDs reviewed by the user."""
+    reviewed_ids = set()
+    try:
+        with driver.session() as session:
+            result = session.run(GET_USER_REVIEWED_BUSINESSES_QUERY, userId=user_id)
+            reviewed_ids = {record["businessId"] for record in result}
+    except Neo4jError as e:
+        logging.error(f"Neo4j error fetching reviewed businesses for user '{user_id}': {e.message}")
+    except Exception as e:
+        logging.error(f"Unexpected error fetching reviewed businesses for user '{user_id}': {e}")
+    return reviewed_ids
+
+def get_business_categories(driver, business_id):
+    """Fetches the categories for a given business (reused from evaluation script)."""
+    categories = []
+    try:
+        with driver.session() as session:
+            result = session.run(GET_BUSINESS_CATEGORIES_QUERY, businessId=business_id)
+            categories = [record["categoryId"] for record in result]
+    except Neo4jError as e:
+        logging.error(f"Neo4j error fetching categories for business '{business_id}': {e.message}")
+    except Exception as e:
+        logging.error(f"Unexpected error fetching categories for business '{business_id}': {e}")
+    return categories
+
+def get_business_details(driver, business_id: str) -> Optional[dict]:
+    """Fetches the name and categories for a given business."""
+    try:
+        with driver.session() as session:
+            result = session.run(GET_BUSINESS_DETAILS_QUERY, businessId=business_id)
+            record = result.single()
+            if record:
+                details = record.data()
+                # Filter out generic categories from the list of categories
+                if 'categories' in details and isinstance(details['categories'], list):
+                    details['categories'] = [cat for cat in details['categories'] if cat not in GENERIC_CATEGORIES]
+                return details
+    except Neo4jError as e:
+        logging.error(f"Neo4j error fetching details for business '{business_id}': {e.message}")
+    except Exception as e:
+        logging.error(f"Unexpected error fetching details for business '{business_id}': {e}")
+    return None
+
+# --- Main Recommender Function ---
+
+def recommend_businesses(driver, user_id: str) -> list[dict]:
+    """
+    Recommends businesses for a user based on their reviewed categories
+    and pre-computed category popularity lists.
+
+    Args:
+        driver: The Neo4j driver instance.
+        user_id: The ID of the user (prefixed, e.g., 'u-xxxxx').
+
+    Returns:
+        A list of recommended business IDs (up to K), or an empty list
+        if prerequisites are missing, user has no reviews, or an error occurs.
+    """
+    logging.info(f"Generating recommendations for user: {user_id}")
+
+    if category_popularity is None:
+        logging.error("Category popularity data not loaded. Cannot generate recommendations.")
+        return []
+
+    # 1. Get businesses already reviewed by the user
+    reviewed_business_ids = get_user_reviewed_businesses(driver, user_id)
+    if not reviewed_business_ids:
+         # Check if the set is empty because of an error or no reviews
+         # We might still proceed if the user exists but has 0 reviews, 
+         # but recommendations would be purely popular items.
+         # For now, assume we need reviewed businesses to find preferred categories.
+         logging.warning(f"Could not fetch reviewed businesses for user {user_id}, or user has no reviews.")
+         # return [] # Option 1: Return empty if no reviews
+         # Option 2: Could fall back to globally popular items if desired (not implemented here)
+    
+    # 2. Find user's preferred categories based on their reviews
+    category_counter = Counter()
+    logging.info(f"Finding preferred categories for user {user_id} based on {len(reviewed_business_ids)} reviewed businesses.")
+    for business_id in reviewed_business_ids:
+        categories = get_business_categories(driver, business_id)
+        category_counter.update(categories)
+    # GENERIC_CATEGORIES is now global
+    for generic in GENERIC_CATEGORIES:
+            category_counter.pop(generic, None)
+
+    if not category_counter:
+        logging.warning(f"Could not determine preferred categories for user {user_id}.")
+        return [] # Cannot recommend without knowing preferred categories
+
+    # 3. Get top N preferred categories
+    top_user_categories = [cat for cat, _ in category_counter.most_common(TOP_USER_CATEGORIES_N)]
+    logging.info(f"User {user_id}'s top {len(top_user_categories)} categories: {top_user_categories}")
+
+    # 4. Generate recommendations from popular businesses in those categories
+    candidate_business_details = [] 
+    seen_candidate_ids = set()
+
+    for category in top_user_categories:
+        if category in category_popularity:
+            for business_id_from_pop_list in category_popularity[category]:
+                # Check if not reviewed and not already added as a candidate
+                if business_id_from_pop_list not in reviewed_business_ids and business_id_from_pop_list not in seen_candidate_ids:
+                    details = get_business_details(driver, business_id_from_pop_list)
+                    if details:
+                        candidate_business_details.append(details)
+                        seen_candidate_ids.add(business_id_from_pop_list)
+                    else:
+                        logging.warning(f"Could not fetch details for candidate business ID: {business_id_from_pop_list}")
+                    
+                    # Stop if we have enough candidates across categories
+                    if len(candidate_business_details) >= RECOMMENDATION_K:
+                        break
+        if len(candidate_business_details) >= RECOMMENDATION_K:
+            break
+
+    # 5. Return top K recommendations
+    final_recs = candidate_business_details[:RECOMMENDATION_K]
+    logging.info(f"Generated {len(final_recs)} recommendations for user {user_id}: {[rec['businessId'] for rec in final_recs]}")
+    
+    return final_recs
+
+if __name__ == "__main__":
+    # Example Usage (replace with a valid user ID from your graph)
+    test_user_id = "u-_BcWyKQL16ndpBdggh2kNA" # Replace with a real user ID like 'u-...'
+
+    if category_popularity is None:
+         print("Cannot run test: Category popularity data failed to load.")
+    else:
+        driver = None
+        try:
+            driver = GraphDatabase.driver(NEO4J_URI, auth=basic_auth(NEO4J_USER, NEO4J_PASSWORD))
+            driver.verify_connectivity()
+            logging.info("Successfully connected to Neo4j for testing.")
+            
+            recommendations = recommend_businesses(driver, test_user_id)
+            
+            if recommendations:
+                print(f"\nTop {len(recommendations)} Recommendations for User: {test_user_id}")
+                for i, rec in enumerate(recommendations):
+                    categories_str = ", ".join(rec.get('categories', []))
+                    print(f"  {i+1}. Name: {rec.get('name', 'N/A')}")
+                    print(f"     ID: {rec.get('businessId', 'N/A')}")
+                    print(f"     Categories: {categories_str if categories_str else 'N/A'}")
+            else:
+                print(f"\nCould not generate recommendations for user {test_user_id}.")
+
+        except ServiceUnavailable as e:
+            logging.error(f"Could not connect to Neo4j at {NEO4J_URI}: {e}")
+        except Exception as e:
+            logging.error(f"Script failed during testing: {e}")
+        finally:
+            if driver:
+                driver.close()
+                logging.info("Neo4j connection closed.")
