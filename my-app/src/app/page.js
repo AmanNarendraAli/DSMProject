@@ -93,17 +93,31 @@ export default function HomePage() {
 
       {profileData && !isLoading && (
         <div className="w-full max-w-5xl grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Placeholder sections for each component */}
-          <div className="p-6 bg-[var(--color-card-background)] rounded-lg shadow-md md:col-span-2"> {/* Make this span 2 columns */}
-            <h2 className="text-2xl font-heading mb-3 text-[var(--color-accent-primary)]">Review Rhythm</h2>
-            {profileData.review_rhythm ? (
-              <ReviewRhythm data={profileData.review_rhythm} />
-            ) : (
-              <p className="text-[var(--color-text-secondary)]">No Review Rhythm data available.</p>
-            )}
-            {profileData.errors?.review_rhythm && <p className="text-red-400 text-sm mt-2">Error: {profileData.errors.review_rhythm}</p>}
+          {/* Combined Review Rhythm and Influence Percentile Section */}
+          <div className="p-6 bg-[var(--color-card-background)] rounded-lg shadow-md md:col-span-2 flex flex-col lg:flex-row lg:items-center lg:gap-8">
+            {/* Review Rhythm Section */}
+            <div className="flex-grow mb-6 lg:mb-0">
+              <h2 className="text-2xl font-heading mb-3 text-[var(--color-accent-primary)]">Review Rhythm</h2>
+              {profileData.review_rhythm ? (
+                <ReviewRhythm data={profileData.review_rhythm} />
+              ) : (
+                <p className="text-[var(--color-text-secondary)]">No Review Rhythm data available.</p>
+              )}
+              {profileData.errors?.review_rhythm && <p className="text-red-400 text-sm mt-2">Error: {profileData.errors.review_rhythm}</p>}
+            </div>
+            {/* Influence Percentile Section */}
+            <div className="lg:w-1/3 lg:text-center">
+              <h2 className="text-2xl font-heading mb-3 text-[var(--color-accent-primary)]">Influence</h2>
+              {profileData.influence_percentile ? (
+                <InfluencePercentile data={profileData.influence_percentile} />
+              ) : (
+                <p className="text-[var(--color-text-secondary)]">No Influence Percentile data available.</p>
+              )}
+              {profileData.errors?.influence_percentile && <p className="text-red-400 text-sm mt-2">Error: {profileData.errors.influence_percentile}</p>}
+            </div>
           </div>
 
+          {/* Other components remain below */}
           <div className="p-6 bg-[var(--color-card-background)] rounded-lg shadow-md">
             <h2 className="text-2xl font-heading mb-3 text-[var(--color-accent-primary)]">Cuisine Diversity</h2>
             {profileData.cuisine_diversity ? (
@@ -164,6 +178,8 @@ export default function HomePage() {
             {profileData.errors?.recommendations && <p className="text-red-400 text-sm mt-2">Error: {profileData.errors.recommendations}</p>}
           </div>
 
+          {/* Removed the separate Influence Percentile card */}
+          {/* 
           <div className="p-6 bg-[var(--color-card-background)] rounded-lg shadow-md">
             <h2 className="text-2xl font-heading mb-3 text-[var(--color-accent-primary)]">Influence Percentile</h2>
             {profileData.influence_percentile ? (
@@ -172,7 +188,8 @@ export default function HomePage() {
               <p className="text-[var(--color-text-secondary)]">No Influence Percentile data available.</p>
             )}
             {profileData.errors?.influence_percentile && <p className="text-red-400 text-sm mt-2">Error: {profileData.errors.influence_percentile}</p>}
-          </div>
+          </div> 
+          */}
         </div>
       )}
     </main>

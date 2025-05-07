@@ -1,47 +1,50 @@
 "use client";
 
-import ReactWordcloudNext from '@korarit/react-wordcloud-next';
+// import ReactWordcloudNext from '@korarit/react-wordcloud-next'; // Remove old import
+import { WordCloud } from '@isoterik/react-word-cloud'; // Corrected: Named import
 
-// Default options for the word cloud, can be customized
-const wordcloudOptions = {
-    rotations: 2,
-    rotationAngles: [-90, 0], // Prefer horizontal and vertical words
-    fontSizes: [20, 80], // Range of font sizes
-    fontFamily: 'var(--font-inter)', // Use Inter font
-    colors: ["#1DB954", "#1ED760", "#1AAE4E", "#FFFFFF", "#B3B3B3"], // Spotify-like colors
-    enableTooltip: true,
-    deterministic: false, // For more varied layouts on each render, set to true for consistent layout
-    padding: 1,
-    scale: 'sqrt', // How word sizes are scaled based on value
-    spiral: 'archimedean', // Layout algorithm
-    transitionDuration: 1000,
-};
+// Options for @isoterik/react-word-cloud
+// Refer to its documentation for all available props
+// https://github.com/isoteriksoftware/react-word-cloud?tab=readme-ov-file#configuring-other-properties
+const defaultFontSize = (word) => Math.sqrt(word.value) * 2; // Example: scale sqrt of value, then multiply
+// Our 'value' is already item.score * 1000
+// So Math.sqrt(item.score * 1000) * 2
+// e.g. score 0.1 -> value 100 -> sqrt 10 -> size 20
+// e.g. score 0.4 -> value 400 -> sqrt 20 -> size 40
 
 export default function WordSignature({ data }) {
     if (!data || !data.signature || data.signature.length === 0) {
         return <p className="text-[var(--color-text-secondary)]">Word signature data is not available.</p>;
     }
 
-    // The library expects data in the format: { text: string, value: number }[]
+    // Data format { text: string, value: number } should be compatible with most word cloud libs
     const words = data.signature.map(item => ({
         text: item.term,
-        value: item.score * 1000, // Scale score for better visual representation if scores are small
+        value: item.score * 1000, // Keep scaling for now, adjust if needed
     }));
 
-    console.log("Word cloud data:", words); // Log the data passed to the component
+    console.log("Word cloud data (for @isoterik/react-word-cloud):", words); // Keep log
 
-    // Ensure the component only renders on the client-side where window is available
-    // react-wordcloud-next might rely on browser APIs not available during SSR
+    // Client-side check remains important
     if (typeof window === 'undefined') {
-        return null; // Or a loading spinner
+        return null;
     }
 
+    // Adapt component usage based on @isoterik/react-word-cloud's expected props
     return (
-        <div style={{ width: '100%', height: '300px' }}> {/* Ensure container has dimensions */}
-            <ReactWordcloudNext
-                words={words}
-                options={wordcloudOptions}
-            // maxWords={100} // Optional: limit number of words
+        <div style={{ width: '100%', height: '300px' }}>
+            <WordCloud
+                words={words} // Corrected prop name
+                width={500} // Explicit width/height as per docs example
+                height={300}
+                font={'var(--font-inter)'} // Pass font family directly
+                fontSize={defaultFontSize} // Use the function for dynamic font size
+                rotate={() => (Math.random() > 0.7 ? (Math.random() > 0.5 ? 90 : -90) : 0)} // ~30% words rotated
+                padding={2}
+                enableTooltip={true}
+            // fill can be a function: (word, index) => colors[index % colors.length]
+            // For simplicity, letting it use its default or a single color for now
+            // fill={"var(--color-accent-primary)"} 
             />
         </div>
     );
