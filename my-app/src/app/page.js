@@ -1,14 +1,23 @@
 "use client"; // Mark this as a Client Component
 
+"use client"; // Mark this as a Client Component
+
 import { useState, useEffect } from 'react';
+import dynamic from 'next/dynamic'; // Import dynamic
 import InfluencePercentile from '../components/InfluencePercentile';
 import CuisineDiversity from '../components/CuisineDiversity';
 import HiddenGems from '../components/HiddenGems';
 import Recommendations from '../components/Recommendations';
 import TasteCluster from '../components/TasteCluster';
-import WordSignature from '../components/WordSignature';
+// import WordSignature from '../components/WordSignature'; // Remove static import
 import SentimentTimeline from '../components/SentimentTimeline';
-import ReviewRhythm from '../components/ReviewRhythm'; // Import the new component
+import ReviewRhythm from '../components/ReviewRhythm';
+
+// Dynamically import WordSignature with SSR disabled
+const WordSignature = dynamic(() => import('../components/WordSignature'), {
+  ssr: false,
+  loading: () => <p className="text-[var(--color-text-secondary)]">Loading word cloud...</p>
+});
 
 export default function HomePage() {
   const [userId, setUserId] = useState('');

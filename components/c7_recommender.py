@@ -70,7 +70,7 @@ RETURN c.category_id AS categoryId
 
 GET_BUSINESS_DETAILS_QUERY = """
 MATCH (b:Business {business_id: $businessId})
-OPTIONAL MATCH (b)-\[:IN_CATEGORY]->(c:Category)
+OPTIONAL MATCH (b)-[:IN_CATEGORY]->(c:Category)
 RETURN b.name AS name, b.business_id AS business_id, collect(DISTINCT c.category_id) AS categories
 """
 
@@ -231,7 +231,7 @@ def recommend_businesses(driver, user_id: str) -> list[dict]:
     # 5. Return top K recommendations
     final_recs = candidate_business_details[:RECOMMENDATION_K]
     logging.info(
-        f"Generated {len(final_recs)} recommendations for user {user_id}: {[rec['businessId'] for rec in final_recs]}"
+        f"Generated {len(final_recs)} recommendations for user {user_id}: {[rec['business_id'] for rec in final_recs]}"
     )
 
     return final_recs
@@ -263,7 +263,7 @@ if __name__ == "__main__":
                 for i, rec in enumerate(recommendations):
                     categories_str = ", ".join(rec.get("categories", []))
                     print(f"  {i+1}. Name: {rec.get('name', 'N/A')}")
-                    print(f"     ID: {rec.get('businessId', 'N/A')}")
+                    print(f"     ID: {rec.get('business_id', 'N/A')}")
                     print(
                         f"     Categories: {categories_str if categories_str else 'N/A'}"
                     )

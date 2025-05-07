@@ -28,11 +28,11 @@ export default function WordSignature({ data }) {
         value: item.score * 1000, // Scale score for better visual representation if scores are small
     }));
 
-    +    console.log("Word cloud data:", words); // Log the data passed to the component
-    +
-     // Ensure the component only renders on the client-side where window is available
-     // react-wordcloud-next might rely on browser APIs not available during SSR
-     if (typeof window === 'undefined') {
+    console.log("Word cloud data:", words); // Log the data passed to the component
+
+    // Ensure the component only renders on the client-side where window is available
+    // react-wordcloud-next might rely on browser APIs not available during SSR
+    if (typeof window === 'undefined') {
         return null; // Or a loading spinner
     }
 
