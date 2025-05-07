@@ -31,7 +31,7 @@ MATCH (u:User {{ {cluster_property}: $clusterId }})-[:WROTE]->(:Review)-[:REVIEW
 WHERE NOT c.category_id IN $genericCategories
 RETURN c.category_id AS category, count(c) AS count
 ORDER BY count DESC
-LIMIT 5
+LIMIT 10
 """ # Used f-string for cluster_property here for consistency, though CLUSTER_PROPERTY is "clusterId"
 
 def get_taste_cluster(driver, user_id: str) -> Optional[Tuple[Any, List[Tuple[str, int]]]]:
