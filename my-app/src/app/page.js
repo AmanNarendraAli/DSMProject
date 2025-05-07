@@ -1,103 +1,171 @@
-import Image from "next/image";
+"use client"; // Mark this as a Client Component
 
-export default function Home() {
+import { useState, useEffect } from 'react';
+import InfluencePercentile from '../components/InfluencePercentile';
+import CuisineDiversity from '../components/CuisineDiversity';
+import HiddenGems from '../components/HiddenGems';
+import Recommendations from '../components/Recommendations';
+import TasteCluster from '../components/TasteCluster';
+import WordSignature from '../components/WordSignature';
+import SentimentTimeline from '../components/SentimentTimeline';
+import ReviewRhythm from '../components/ReviewRhythm'; // Import the new component
+
+export default function HomePage() {
+  const [userId, setUserId] = useState('');
+  const [profileData, setProfileData] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  const fetchProfileData = async () => {
+    if (!userId.trim()) {
+      setError("Please enter a User ID.");
+      setProfileData(null);
+      return;
+    }
+    setIsLoading(true);
+    setError(null);
+    setProfileData(null); // Clear previous data
+
+    try {
+      // Assume the backend is running on http://localhost:8000
+      const response = await fetch(`http://localhost:8000/api/users/${userId}/full-profile`);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ detail: "Failed to fetch data. Invalid JSON response." }));
+        throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
+      setProfileData(data);
+    } catch (err) {
+      console.error("Fetch error:", err);
+      setError(err.message || "An unexpected error occurred.");
+      setProfileData(null);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    fetchProfileData();
+  };
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              src/app/page.js
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+    <main className="flex min-h-screen flex-col items-center justify-start p-8 bg-[var(--color-background)] text-[var(--color-foreground)]">
+      <div className="z-10 w-full max-w-5xl items-center justify-between font-mono text-sm lg:flex mb-12">
+        <h1 className="text-4xl font-heading mb-4 text-center lg:text-left w-full">Your User Profile Insights</h1>
+      </div>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+      <form onSubmit={handleSubmit} className="mb-8 flex items-center gap-4">
+        <input
+          type="text"
+          value={userId}
+          onChange={(e) => setUserId(e.target.value)}
+          placeholder="Enter User ID (e.g., u-xxxxx)"
+          className="px-4 py-2 border border-gray-600 rounded-md bg-[var(--color-card-background)] text-[var(--color-foreground)] focus:ring-2 focus:ring-[var(--color-accent-primary)] focus:border-[var(--color-accent-primary)] outline-none"
+        />
+        <button
+          type="submit"
+          disabled={isLoading}
+          className="px-6 py-2 bg-[var(--color-accent-primary)] text-white font-semibold rounded-md hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {isLoading ? 'Loading...' : 'Get Profile'}
+        </button>
+      </form>
+
+      {error && (
+        <div className="mb-8 p-4 text-red-400 bg-red-900/30 border border-red-700 rounded-md w-full max-w-md text-center">
+          <p>Error: {error}</p>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+      )}
+
+      {isLoading && (
+        <div className="text-xl text-[var(--color-text-secondary)]">Fetching your profile data...</div>
+      )}
+
+      {profileData && !isLoading && (
+        <div className="w-full max-w-5xl grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Placeholder sections for each component */}
+          <div className="p-6 bg-[var(--color-card-background)] rounded-lg shadow-md md:col-span-2"> {/* Make this span 2 columns */}
+            <h2 className="text-2xl font-heading mb-3 text-[var(--color-accent-primary)]">Review Rhythm</h2>
+            {profileData.review_rhythm ? (
+              <ReviewRhythm data={profileData.review_rhythm} />
+            ) : (
+              <p className="text-[var(--color-text-secondary)]">No Review Rhythm data available.</p>
+            )}
+            {profileData.errors?.review_rhythm && <p className="text-red-400 text-sm mt-2">Error: {profileData.errors.review_rhythm}</p>}
+          </div>
+
+          <div className="p-6 bg-[var(--color-card-background)] rounded-lg shadow-md">
+            <h2 className="text-2xl font-heading mb-3 text-[var(--color-accent-primary)]">Cuisine Diversity</h2>
+            {profileData.cuisine_diversity ? (
+              <CuisineDiversity data={profileData.cuisine_diversity} />
+            ) : (
+              <p className="text-[var(--color-text-secondary)]">No Cuisine Diversity data available.</p>
+            )}
+            {profileData.errors?.cuisine_diversity && <p className="text-red-400 text-sm mt-2">Error: {profileData.errors.cuisine_diversity}</p>}
+          </div>
+
+          <div className="p-6 bg-[var(--color-card-background)] rounded-lg shadow-md">
+            <h2 className="text-2xl font-heading mb-3 text-[var(--color-accent-primary)]">Sentiment Timeline</h2>
+            {profileData.sentiment_timeline ? (
+              <SentimentTimeline data={profileData.sentiment_timeline} />
+            ) : (
+              <p className="text-[var(--color-text-secondary)]">No Sentiment Timeline data available.</p>
+            )}
+            {profileData.errors?.sentiment_timeline && <p className="text-red-400 text-sm mt-2">Error: {profileData.errors.sentiment_timeline}</p>}
+          </div>
+
+          <div className="p-6 bg-[var(--color-card-background)] rounded-lg shadow-md">
+            <h2 className="text-2xl font-heading mb-3 text-[var(--color-accent-primary)]">Word Signature</h2>
+            {profileData.word_signature ? (
+              <WordSignature data={profileData.word_signature} />
+            ) : (
+              <p className="text-[var(--color-text-secondary)]">No Word Signature data available.</p>
+            )}
+            {profileData.errors?.word_signature && <p className="text-red-400 text-sm mt-2">Error: {profileData.errors.word_signature}</p>}
+          </div>
+
+          <div className="p-6 bg-[var(--color-card-background)] rounded-lg shadow-md">
+            <h2 className="text-2xl font-heading mb-3 text-[var(--color-accent-primary)]">Hidden Gems</h2>
+            {profileData.hidden_gems ? (
+              <HiddenGems data={profileData.hidden_gems} />
+            ) : (
+              <p className="text-[var(--color-text-secondary)]">No Hidden Gems data available.</p>
+            )}
+            {profileData.errors?.hidden_gems && <p className="text-red-400 text-sm mt-2">Error: {profileData.errors.hidden_gems}</p>}
+          </div>
+
+          <div className="p-6 bg-[var(--color-card-background)] rounded-lg shadow-md">
+            <h2 className="text-2xl font-heading mb-3 text-[var(--color-accent-primary)]">Taste Cluster</h2>
+            {profileData.taste_cluster ? (
+              <TasteCluster data={profileData.taste_cluster} />
+            ) : (
+              <p className="text-[var(--color-text-secondary)]">No Taste Cluster data available.</p>
+            )}
+            {profileData.errors?.taste_cluster && <p className="text-red-400 text-sm mt-2">Error: {profileData.errors.taste_cluster}</p>}
+          </div>
+
+          <div className="p-6 bg-[var(--color-card-background)] rounded-lg shadow-md">
+            <h2 className="text-2xl font-heading mb-3 text-[var(--color-accent-primary)]">Recommendations</h2>
+            {profileData.recommendations ? (
+              <Recommendations data={profileData.recommendations} />
+            ) : (
+              <p className="text-[var(--color-text-secondary)]">No Recommendations data available.</p>
+            )}
+            {profileData.errors?.recommendations && <p className="text-red-400 text-sm mt-2">Error: {profileData.errors.recommendations}</p>}
+          </div>
+
+          <div className="p-6 bg-[var(--color-card-background)] rounded-lg shadow-md">
+            <h2 className="text-2xl font-heading mb-3 text-[var(--color-accent-primary)]">Influence Percentile</h2>
+            {profileData.influence_percentile ? (
+              <InfluencePercentile data={profileData.influence_percentile} />
+            ) : (
+              <p className="text-[var(--color-text-secondary)]">No Influence Percentile data available.</p>
+            )}
+            {profileData.errors?.influence_percentile && <p className="text-red-400 text-sm mt-2">Error: {profileData.errors.influence_percentile}</p>}
+          </div>
+        </div>
+      )}
+    </main>
   );
 }
