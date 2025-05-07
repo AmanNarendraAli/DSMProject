@@ -22,7 +22,7 @@ NEO4J_PASSWORD = "muttabbocks" # Replace with your password if different
 IDF_VECTORIZER_PATH = PROJECT_ROOT / "offline_assets" / "idf_vector.pkl"
 SPACY_MODEL = "en_core_web_sm" 
 MAX_REVIEWS_FOR_SIGNATURE = 5000 # Limit number of reviews processed per user
-TOP_N_TERMS = 20 # Number of top terms/bigrams to return
+TOP_N_TERMS = 30 # Number of top terms/bigrams to return
 ALLOWED_POS = {"PROPN", "ADJ"} # Part-of-speech tags to keep
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')

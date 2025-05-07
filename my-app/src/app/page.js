@@ -1,7 +1,5 @@
 "use client"; // Mark this as a Client Component
 
-"use client"; // Mark this as a Client Component
-
 import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic'; // Import dynamic
 import InfluencePercentile from '../components/InfluencePercentile';
@@ -92,104 +90,86 @@ export default function HomePage() {
       )}
 
       {profileData && !isLoading && (
-        <div className="w-full max-w-5xl grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Combined Review Rhythm and Influence Percentile Section */}
-          <div className="p-6 bg-[var(--color-card-background)] rounded-lg shadow-md md:col-span-2 flex flex-col lg:flex-row lg:items-center lg:gap-8">
-            {/* Review Rhythm Section */}
-            <div className="flex-grow mb-6 lg:mb-0">
-              <h2 className="text-2xl font-heading mb-3 text-[var(--color-accent-primary)]">Review Rhythm</h2>
-              {profileData.review_rhythm ? (
-                <ReviewRhythm data={profileData.review_rhythm} />
-              ) : (
+        <div className="w-full max-w-5xl grid grid-cols-1 md:grid-cols-2 gap-4"> {/* Reduced gap */}
+          {/* Top Row: Review Rhythm + Influence */}
+          <div className="bg-[var(--color-card-background)] rounded-lg shadow-md md:col-span-2 grid grid-cols-1 lg:grid-cols-3 gap-4 p-4"> {/* Reduced padding and gap */}
+            {/* Review Rhythm Section (takes 2/3 width on large screens) */}
+            <div className="lg:col-span-2">
+              <h2 className="text-xl font-heading mb-2 text-[var(--color-accent-primary)]">Review Rhythm</h2> {/* Slightly smaller heading */}
+              {profileData.review_rhythm ?
+                <ReviewRhythm data={profileData.review_rhythm} /> :
                 <p className="text-[var(--color-text-secondary)]">No Review Rhythm data available.</p>
-              )}
-              {profileData.errors?.review_rhythm && <p className="text-red-400 text-sm mt-2">Error: {profileData.errors.review_rhythm}</p>}
+              }
+              {profileData.errors?.review_rhythm && <p className="text-red-400 text-sm mt-1">Error: {profileData.errors.review_rhythm}</p>}
             </div>
-            {/* Influence Percentile Section */}
-            <div className="lg:w-1/3 lg:text-center">
-              <h2 className="text-2xl font-heading mb-3 text-[var(--color-accent-primary)]">Influence</h2>
-              {profileData.influence_percentile ? (
-                <InfluencePercentile data={profileData.influence_percentile} />
-              ) : (
+            {/* Influence Percentile Section (takes 1/3 width on large screens) */}
+            <div className="lg:col-span-1 flex flex-col justify-center items-center lg:items-start">
+              <h2 className="text-xl font-heading mb-2 text-[var(--color-accent-primary)]">Influence</h2> {/* Slightly smaller heading */}
+              {profileData.influence_percentile ?
+                <InfluencePercentile data={profileData.influence_percentile} /> :
                 <p className="text-[var(--color-text-secondary)]">No Influence Percentile data available.</p>
-              )}
-              {profileData.errors?.influence_percentile && <p className="text-red-400 text-sm mt-2">Error: {profileData.errors.influence_percentile}</p>}
+              }
+              {profileData.errors?.influence_percentile && <p className="text-red-400 text-sm mt-1">Error: {profileData.errors.influence_percentile}</p>}
             </div>
           </div>
 
           {/* Other components remain below */}
-          <div className="p-6 bg-[var(--color-card-background)] rounded-lg shadow-md">
-            <h2 className="text-2xl font-heading mb-3 text-[var(--color-accent-primary)]">Cuisine Diversity</h2>
-            {profileData.cuisine_diversity ? (
-              <CuisineDiversity data={profileData.cuisine_diversity} />
-            ) : (
+          {/* Reduced padding (p-4) and gap (gap-4) for all cards */}
+          <div className="p-4 bg-[var(--color-card-background)] rounded-lg shadow-md"> {/* Reduced padding */}
+            <h2 className="text-xl font-heading mb-2 text-[var(--color-accent-primary)]">Cuisine Diversity</h2> {/* Smaller heading */}
+            {profileData.cuisine_diversity ?
+              <CuisineDiversity data={profileData.cuisine_diversity} /> :
               <p className="text-[var(--color-text-secondary)]">No Cuisine Diversity data available.</p>
-            )}
-            {profileData.errors?.cuisine_diversity && <p className="text-red-400 text-sm mt-2">Error: {profileData.errors.cuisine_diversity}</p>}
+            }
+            {profileData.errors?.cuisine_diversity && <p className="text-red-400 text-sm mt-1">Error: {profileData.errors.cuisine_diversity}</p>}
           </div>
 
-          <div className="p-6 bg-[var(--color-card-background)] rounded-lg shadow-md">
-            <h2 className="text-2xl font-heading mb-3 text-[var(--color-accent-primary)]">Sentiment Timeline</h2>
-            {profileData.sentiment_timeline ? (
-              <SentimentTimeline data={profileData.sentiment_timeline} />
-            ) : (
+          <div className="p-4 bg-[var(--color-card-background)] rounded-lg shadow-md"> {/* Reduced padding */}
+            <h2 className="text-xl font-heading mb-2 text-[var(--color-accent-primary)]">Sentiment Timeline</h2> {/* Smaller heading */}
+            {profileData.sentiment_timeline ?
+              <SentimentTimeline data={profileData.sentiment_timeline} /> :
               <p className="text-[var(--color-text-secondary)]">No Sentiment Timeline data available.</p>
-            )}
-            {profileData.errors?.sentiment_timeline && <p className="text-red-400 text-sm mt-2">Error: {profileData.errors.sentiment_timeline}</p>}
+            }
+            {profileData.errors?.sentiment_timeline && <p className="text-red-400 text-sm mt-1">Error: {profileData.errors.sentiment_timeline}</p>}
           </div>
 
-          <div className="p-6 bg-[var(--color-card-background)] rounded-lg shadow-md">
-            <h2 className="text-2xl font-heading mb-3 text-[var(--color-accent-primary)]">Word Signature</h2>
-            {profileData.word_signature ? (
-              <WordSignature data={profileData.word_signature} />
-            ) : (
+          <div className="p-4 bg-[var(--color-card-background)] rounded-lg shadow-md"> {/* Reduced padding */}
+            <h2 className="text-xl font-heading mb-2 text-[var(--color-accent-primary)]">Word Signature</h2> {/* Smaller heading */}
+            {profileData.word_signature ?
+              <WordSignature data={profileData.word_signature} /> :
               <p className="text-[var(--color-text-secondary)]">No Word Signature data available.</p>
-            )}
-            {profileData.errors?.word_signature && <p className="text-red-400 text-sm mt-2">Error: {profileData.errors.word_signature}</p>}
+            }
+            {profileData.errors?.word_signature && <p className="text-red-400 text-sm mt-1">Error: {profileData.errors.word_signature}</p>}
           </div>
 
-          <div className="p-6 bg-[var(--color-card-background)] rounded-lg shadow-md">
-            <h2 className="text-2xl font-heading mb-3 text-[var(--color-accent-primary)]">Hidden Gems</h2>
-            {profileData.hidden_gems ? (
-              <HiddenGems data={profileData.hidden_gems} />
-            ) : (
+          <div className="p-4 bg-[var(--color-card-background)] rounded-lg shadow-md"> {/* Reduced padding */}
+            <h2 className="text-xl font-heading mb-2 text-[var(--color-accent-primary)]">Hidden Gems</h2> {/* Smaller heading */}
+            {profileData.hidden_gems ?
+              <HiddenGems data={profileData.hidden_gems} /> :
               <p className="text-[var(--color-text-secondary)]">No Hidden Gems data available.</p>
-            )}
-            {profileData.errors?.hidden_gems && <p className="text-red-400 text-sm mt-2">Error: {profileData.errors.hidden_gems}</p>}
+            }
+            {profileData.errors?.hidden_gems && <p className="text-red-400 text-sm mt-1">Error: {profileData.errors.hidden_gems}</p>}
           </div>
 
-          <div className="p-6 bg-[var(--color-card-background)] rounded-lg shadow-md">
-            <h2 className="text-2xl font-heading mb-3 text-[var(--color-accent-primary)]">Taste Cluster</h2>
-            {profileData.taste_cluster ? (
-              <TasteCluster data={profileData.taste_cluster} />
-            ) : (
+          <div className="p-4 bg-[var(--color-card-background)] rounded-lg shadow-md"> {/* Reduced padding */}
+            <h2 className="text-xl font-heading mb-2 text-[var(--color-accent-primary)]">Taste Cluster</h2> {/* Smaller heading */}
+            {profileData.taste_cluster ?
+              <TasteCluster data={profileData.taste_cluster} /> :
               <p className="text-[var(--color-text-secondary)]">No Taste Cluster data available.</p>
-            )}
-            {profileData.errors?.taste_cluster && <p className="text-red-400 text-sm mt-2">Error: {profileData.errors.taste_cluster}</p>}
+            }
+            {profileData.errors?.taste_cluster && <p className="text-red-400 text-sm mt-1">Error: {profileData.errors.taste_cluster}</p>}
           </div>
 
-          <div className="p-6 bg-[var(--color-card-background)] rounded-lg shadow-md">
-            <h2 className="text-2xl font-heading mb-3 text-[var(--color-accent-primary)]">Recommendations</h2>
-            {profileData.recommendations ? (
-              <Recommendations data={profileData.recommendations} />
-            ) : (
+          <div className="p-4 bg-[var(--color-card-background)] rounded-lg shadow-md"> {/* Reduced padding */}
+            <h2 className="text-xl font-heading mb-2 text-[var(--color-accent-primary)]">Recommendations</h2> {/* Smaller heading */}
+            {profileData.recommendations ?
+              <Recommendations data={profileData.recommendations} /> :
               <p className="text-[var(--color-text-secondary)]">No Recommendations data available.</p>
-            )}
-            {profileData.errors?.recommendations && <p className="text-red-400 text-sm mt-2">Error: {profileData.errors.recommendations}</p>}
+            }
+            {profileData.errors?.recommendations && <p className="text-red-400 text-sm mt-1">Error: {profileData.errors.recommendations}</p>}
           </div>
 
-          {/* Removed the separate Influence Percentile card */}
-          {/* 
-          <div className="p-6 bg-[var(--color-card-background)] rounded-lg shadow-md">
-            <h2 className="text-2xl font-heading mb-3 text-[var(--color-accent-primary)]">Influence Percentile</h2>
-            {profileData.influence_percentile ? (
-              <InfluencePercentile data={profileData.influence_percentile} />
-            ) : (
-              <p className="text-[var(--color-text-secondary)]">No Influence Percentile data available.</p>
-            )}
-            {profileData.errors?.influence_percentile && <p className="text-red-400 text-sm mt-2">Error: {profileData.errors.influence_percentile}</p>}
-          </div> 
-          */}
+          {/* Influence Percentile is now combined with Review Rhythm */}
         </div>
       )}
     </main>

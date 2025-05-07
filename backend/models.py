@@ -55,6 +55,7 @@ class TasteClusterData(BaseModel):
 class RecommendedBusiness(BaseModel):
     business_id: str
     name: str
+    avgStar: Optional[float] = Field(None, alias="avgStar", description="Average star rating of the business.")
     categories: List[str] = Field(default_factory=list)
 
 class RecommendationsData(BaseModel):

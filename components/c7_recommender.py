@@ -19,6 +19,9 @@ CATEGORY_POPULARITY_FILE = (
 )
 RECOMMENDATION_K = 5  # Number of recommendations to return
 TOP_USER_CATEGORIES_N = 5  # Number of user's top categories to consider
+# NEW: Minimum review count for a business to be recommended
+MIN_REVIEW_COUNT_FOR_RECOMMENDATION = 10
+
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -68,10 +71,15 @@ MATCH (b:Business {business_id: $businessId})-[:IN_CATEGORY]->(c:Category)
 RETURN c.category_id AS categoryId
 """
 
+# MODIFIED QUERY: Added b.review_count
 GET_BUSINESS_DETAILS_QUERY = """
 MATCH (b:Business {business_id: $businessId})
 OPTIONAL MATCH (b)-[:IN_CATEGORY]->(c:Category)
-RETURN b.name AS name, b.business_id AS business_id, collect(DISTINCT c.category_id) AS categories
+RETURN b.name AS name,
+       b.business_id AS business_id,
+       b.avgStar AS avgStar,
+       b.review_count AS review_count,  // Assuming 'review_count' is the property name
+       collect(DISTINCT c.category_id) AS categories
 """
 
 # --- Helper Functions ---
@@ -114,14 +122,20 @@ def get_business_categories(driver, business_id):
 
 
 def get_business_details(driver, business_id: str) -> Optional[dict]:
-    """Fetches the name and categories for a given business."""
+    """Fetches the name, categories, avgStar, and review_count for a given business.""" # Docstring updated
     try:
         with driver.session() as session:
             result = session.run(GET_BUSINESS_DETAILS_QUERY, businessId=business_id)
             record = result.single()
             if record:
                 details = record.data()
-                # Filter out generic categories from the list of categories
+                # Ensure review_count is an int, default to 0 if missing or not a number
+                # This handles cases where review_count might be None or not an integer from DB
+                try:
+                    details['review_count'] = int(details.get('review_count', 0))
+                except (ValueError, TypeError):
+                    details['review_count'] = 0
+
                 if "categories" in details and isinstance(details["categories"], list):
                     details["categories"] = [
                         cat
@@ -145,8 +159,8 @@ def get_business_details(driver, business_id: str) -> Optional[dict]:
 
 def recommend_businesses(driver, user_id: str) -> list[dict]:
     """
-    Recommends businesses for a user based on their reviewed categories
-    and pre-computed category popularity lists.
+    Recommends businesses for a user based on their reviewed categories,
+    pre-computed category popularity lists, and minimum review count.
 
     Args:
         driver: The Neo4j driver instance.
@@ -164,20 +178,14 @@ def recommend_businesses(driver, user_id: str) -> list[dict]:
         )
         return []
 
-    # 1. Get businesses already reviewed by the user
     reviewed_business_ids = get_user_reviewed_businesses(driver, user_id)
     if not reviewed_business_ids:
-        # Check if the set is empty because of an error or no reviews
-        # We might still proceed if the user exists but has 0 reviews,
-        # but recommendations would be purely popular items.
-        # For now, assume we need reviewed businesses to find preferred categories.
         logging.warning(
-            f"Could not fetch reviewed businesses for user {user_id}, or user has no reviews."
+            f"Could not fetch reviewed businesses for user {user_id}, or user has no reviews. Proceeding based on potential global popularity if applicable."
         )
-        # return [] # Option 1: Return empty if no reviews
-        # Option 2: Could fall back to globally popular items if desired (not implemented here)
+        # Proceeding, as user might have no reviews, but we might still recommend based on general prefs later
+        # However, current logic relies on user's preferred categories from reviews.
 
-    # 2. Find user's preferred categories based on their reviews
     category_counter = Counter()
     logging.info(
         f"Finding preferred categories for user {user_id} based on {len(reviewed_business_ids)} reviewed businesses."
@@ -185,50 +193,56 @@ def recommend_businesses(driver, user_id: str) -> list[dict]:
     for business_id in reviewed_business_ids:
         categories = get_business_categories(driver, business_id)
         category_counter.update(categories)
-    # GENERIC_CATEGORIES is now global
+
     for generic in GENERIC_CATEGORIES:
         category_counter.pop(generic, None)
 
     if not category_counter:
-        logging.warning(f"Could not determine preferred categories for user {user_id}.")
-        return []  # Cannot recommend without knowing preferred categories
+        logging.warning(f"Could not determine preferred categories for user {user_id} after filtering generic ones. Cannot generate category-based recommendations.")
+        # Potentially fall back to globally popular items across all categories here,
+        # or return empty if strict category preference is required.
+        # For now, returning empty if no specific categories found.
+        return []
 
-    # 3. Get top N preferred categories
     top_user_categories = [
         cat for cat, _ in category_counter.most_common(TOP_USER_CATEGORIES_N)
     ]
     logging.info(
-        f"User {user_id}'s top {len(top_user_categories)} categories: {top_user_categories}"
+        f"User {user_id}'s top {len(top_user_categories)} non-generic categories: {top_user_categories}"
     )
 
-    # 4. Generate recommendations from popular businesses in those categories
     candidate_business_details = []
     seen_candidate_ids = set()
 
     for category in top_user_categories:
         if category in category_popularity:
             for business_id_from_pop_list in category_popularity[category]:
-                # Check if not reviewed and not already added as a candidate
                 if (
                     business_id_from_pop_list not in reviewed_business_ids
                     and business_id_from_pop_list not in seen_candidate_ids
                 ):
                     details = get_business_details(driver, business_id_from_pop_list)
                     if details:
-                        candidate_business_details.append(details)
-                        seen_candidate_ids.add(business_id_from_pop_list)
+                        # MODIFIED: Filter by review count
+                        if details.get("review_count", 0) >= MIN_REVIEW_COUNT_FOR_RECOMMENDATION:
+                            candidate_business_details.append(details)
+                            seen_candidate_ids.add(business_id_from_pop_list)
+                        else:
+                            logging.info(
+                                f"Skipping business '{details.get('name', business_id_from_pop_list)}' (ID: {business_id_from_pop_list}) "
+                                f"due to low review count: {details.get('review_count', 0)} "
+                                f"(threshold: {MIN_REVIEW_COUNT_FOR_RECOMMENDATION})."
+                            )
                     else:
                         logging.warning(
                             f"Could not fetch details for candidate business ID: {business_id_from_pop_list}"
                         )
 
-                    # Stop if we have enough candidates across categories
                     if len(candidate_business_details) >= RECOMMENDATION_K:
                         break
         if len(candidate_business_details) >= RECOMMENDATION_K:
             break
 
-    # 5. Return top K recommendations
     final_recs = candidate_business_details[:RECOMMENDATION_K]
     logging.info(
         f"Generated {len(final_recs)} recommendations for user {user_id}: {[rec['business_id'] for rec in final_recs]}"
@@ -238,9 +252,8 @@ def recommend_businesses(driver, user_id: str) -> list[dict]:
 
 
 if __name__ == "__main__":
-    # Example Usage (replace with a valid user ID from your graph)
     test_user_id = (
-        "u-_BcWyKQL16ndpBdggh2kNA"  # Replace with a real user ID like 'u-...'
+        "u-_BcWyKQL16ndpBdggh2kNA"
     )
 
     if category_popularity is None:
@@ -262,7 +275,10 @@ if __name__ == "__main__":
                 )
                 for i, rec in enumerate(recommendations):
                     categories_str = ", ".join(rec.get("categories", []))
-                    print(f"  {i+1}. Name: {rec.get('name', 'N/A')}")
+                    avg_star_str = f"{rec.get('avgStar', 'N/A'):.1f} ⭐" if rec.get('avgStar') is not None else "N/A"
+                    # MODIFIED: Added review_count to print
+                    review_count_str = f"{rec.get('review_count', 'N/A')} reviews"
+                    print(f"  {i+1}. Name: {rec.get('name', 'N/A')} - Rating: {avg_star_str} ({review_count_str})")
                     print(f"     ID: {rec.get('business_id', 'N/A')}")
                     print(
                         f"     Categories: {categories_str if categories_str else 'N/A'}"
