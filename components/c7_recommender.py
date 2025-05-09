@@ -82,6 +82,7 @@ RETURN b.name AS name,
        collect(DISTINCT c.category_id) AS categories
 """
 
+
 # --- Helper Functions ---
 
 
